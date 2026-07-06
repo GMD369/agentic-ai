@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Infrastructure Agent</title>
+    <style>
+        body { font-family: sans-serif; background: #f0f2f5; display: flex; justify-content: center; height: 100vh; margin: 0; }
+        .chat-container { width: 100%; max-width: 600px; background: white; height: 90vh; margin-top: 2vh; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); display: flex; flex-direction: column; overflow: hidden; }
+        .chat-header { background: #667eea; color: white; padding: 20px; text-align: center; }
+        .chat-messages { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
+        .message { padding: 10px 15px; border-radius: 15px; max-width: 80%; line-height: 1.4; }
+        .user { background: #667eea; color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
+        .bot { background: #e4e6eb; color: #333; align-self: flex-start; border-bottom-left-radius: 2px; }
+        .input-area { padding: 20px; border-top: 1px solid #eee; display: flex; gap: 10px; }
+        input { flex: 1; padding: 12px; border: 1px solid #ddd; border-radius: 25px; outline: none; }
+        button { padding: 10px 20px; background: #667eea; color: white; border: none; border-radius: 25px; cursor: pointer; }
+        button:disabled { background: #ccc; }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <h2>🤖 AWS Infrastructure Agent</h2>
+        </div>
+        <div class="chat-messages" id="messages">
+            <div class="message bot">Hello! I can create AWS servers. Try saying "Create a server named WebApp".</div>
+        </div>
+        <form class="input-area" id="chatForm">
+            <input type="text" id="userInput" placeholder="Type your request..." autocomplete="off">
+            <button type="submit" id="sendBtn">Send</button>
+        </form>
+    </div>
+
+    <script>
+        const form = document.getElementById('chatForm');
+        const input = document.getElementById('userInput');
+        const messages = document.getElementById('messages');
+        const sendBtn = document.getElementById('sendBtn');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const text = input.value.trim();
+            if (!text) return;
+
+            // 1. Show User Message
+            addMessage(text, 'user');
+            input.value = '';
+            sendBtn.disabled = true;
+
+            // 2. Show Loading
+            const loadingId = addMessage('Thinking...', 'bot');
+
+            try {
+                // 3. Send to Python
+                const res = await fetch('/chat', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ message: text })
+                });
+                const data = await res.json();
+                
+                // 4. Update Chat with Response
+                document.getElementById(loadingId).remove();
+                addMessage(data.response, 'bot');
+                
+            } catch (err) {
+                document.getElementById(loadingId).remove();
+                addMessage("Error connecting to server.", 'bot');
+            }
+            sendBtn.disabled = false;
+        });
+
+        function addMessage(text, type) {
+            const div = document.createElement('div');
+            div.className = `message ${type}`;
+            div.textContent = text;
+            div.id = 'msg-' + Date.now();
+            messages.appendChild(div);
+            messages.scrollTop = messages.scrollHeight;
+            return div.id;
+        }
+    </script>
+</body>
+</html>
